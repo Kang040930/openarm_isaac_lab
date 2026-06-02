@@ -219,7 +219,7 @@ class ObservationsCfg:
         object_type_label = ObsTerm(func=mdp.object_type_label)
 
         def __post_init__(self):
-            self.enable_corruption = False
+            self.enable_corruption = True
             self.concatenate_terms = True
 
     policy: PolicyCfg = PolicyCfg()
