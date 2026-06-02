@@ -1,10 +1,7 @@
-# docs/progress_report.md
-
-```markdown
 # OpenArm 双臂抓取 — 进展报告
 
-**日期**：2026-05-30  
-**版本**：v10（Action Masking + 无阶段课程）
+**日期**：2026-06-01  
+**版本**：v15（三重 NaN 防线 + empirical_normalization）
 
 ---
 
@@ -21,12 +18,13 @@
 | 对象 | 位置 (x, y, z) | 说明 |
 |---|---|---|
 | 机器人底座 | (0, 0, 0) | 臂基座在 z=0.698 |
-| 平台 | (0.25, 0, 0.28) | 运动学刚体 50×40×4cm |
-| 方块 | (0.25, 0, 0.34) | DexCube scale=0.8 (8cm) |
+| 平台 | (0.25, 0, 0.18) | 运动学刚体 50×40×4cm |
+| 方块 | (0.25, 0, 0.24) | DexCube scale=0.6 (4.8cm) |
 | 地面 | (0, 0, -1.05) | 视觉地面 |
 | 目标 x | 0.15~0.30 | |
 | 目标 y | -0.10~0.10 | |
 | 目标 z | 0.50~0.70 | 举升阈值 z>0.37 上方 |
+| 目标坐标系 | world 基座 | **body_name="openarm_body_link"**（v11 修复）|
 
 ---
 
@@ -61,26 +59,21 @@ hand_side=1 (右手模式): left_arm_action  = [0,0,0,0,0,0,0]
 
 ---
 
-## 5. 奖励函数
-
-**完全对齐 OpenArm 单臂 Lift Demo**
+## 5. 奖励函数 (对齐 Isaac Lab 官方)
 
 | 奖励 | 权重 | 公式 |
 |---|---|---|
-| left_reaching | 1.1 | `(1-tanh(左手距/0.1)) × (hand_side=0)` |
-| right_reaching | 1.1 | `(1-tanh(右手距/0.1)) × (hand_side=1)` |
-| lifting_object | 8.0 | `(方块z > 0.37) — 二值` |
-| object_goal_tracking | 16.0 | `(1-tanh(距目标/0.3)) × (z>0.37)` |
-| object_goal_tracking_fine | 5.0 | 同上，精细版 std=0.05 |
+| left_reaching | 1.0 | `(1-tanh(左手距/0.5)) × (hand_side=0)` |
+| right_reaching | 1.0 | `(1-tanh(右手距/0.5)) × (hand_side=1)` |
+| left_grasp | 2.0 | `(距<6cm & 夹爪闭合) × (hand_side=0)` |
+| right_grasp | 2.0 | `(距<6cm & 夹爪闭合) × (hand_side=1)` |
+| lifting_object | 15.0 | `(z > 0.24) — 二元` |
+| goal_tracking | 16.0 | `(z>0.24) × (1-tanh(距目标/0.3))` |
+| goal_tracking_fine | 5.0 | 同上，std=0.05 |
 | action_rate | -1e-4 | 动作平滑 |
-| left_joint_vel | -1e-4 | 左关节速度 |
-| right_joint_vel | -1e-4 | 右关节速度 |
+| joint_vel | -1e-4 | 关节速度惩罚 |
 
-**关键设计**：
-- lifting=8.0 + 阈值 0.37：方块起始 0.34，举 3cm 即触发 → 底薪角色
-- goal_tracking=16.0：主力驱动方块到目标 (z=0.5~0.7)
-- 无 grasp 奖励：单臂 demo 证明 reaching→lifting 链已足够
-- 无 idle 惩罚：Action Masking 替代
+**链条**: reach(1) → grasp(2) → lift(15) → track(16+5)
 
 ---
 
@@ -117,6 +110,11 @@ hand_side=1 (右手模式): left_arm_action  = [0,0,0,0,0,0,0]
 | 熵正则系数 | 0.006 |
 | 物理步长 | 0.01 (100Hz) |
 | 控制步长 | 0.02 (50Hz, decimation=2) |
+| 观测归一化 | empirical_normalization=True（±5σ 截断） |
+| 观测截断 | clip_obs=10.0 |
+| 动作截断 | clip_actions=1.0 |
+| 视频间隔 | 200 iter（约 10 分钟） |
+| 视频时长 | 500 步（完整 1 episode） |
 
 ---
 
@@ -127,6 +125,8 @@ hand_side=1 (右手模式): left_arm_action  = [0,0,0,0,0,0,0]
 | v1-v8 | 5/26-5/28 | 多次 reward 结构迭代、IK 控制尝试 | NaN 多次爆炸、grasp 未激活 |
 | v9 | 5/29 | 奖励对齐单臂 demo、网络扩容[256,128,64] | entropy 持续飙升到 40+ |
 | **v10** | **5/29** | **Action Masking、方块固定、无阶段** | **首次稳定收敛** |
+| **v15** | **6/01** | **三重 NaN 防线: empirical_normalization=True + 夹爪 effort 40 + 刚度 500** | 待训练 |
+| **v13** | **6/01** | **初始姿态: pos=-0.2, joint2=±1.2, joint4=1.5, 手指张开** | NaN 爆炸 |
 
 ### v10 关键数据 (iter 154)
 
@@ -141,7 +141,7 @@ ep时长     = 500    (全部跑满)
 
 ## 9. 当前状态
 
-- 训练进行中（09:19 启动，Stage-2 配置：手随机、方块固定）
+- v15 待训练：三重 NaN 防线已部署，对标 Isaac Lab 官方
 - Action Masking 效果验证：右手 reaching=0, joint_vel=0
 - 系统内存不足（24GB/30GB），存在崩溃风险
 
@@ -169,22 +169,23 @@ trainings/                  ← 训练模型存档
 
 ## 11. 已知问题
 
-| 问题 | 状态 |
-|---|---|
-| FrameTransformer 无法用于双手（USD 缺少 link0）| 降级为 body_pos_w |
-| ContactSensor 不可用（手指碰撞几何缺失）| 降级为距离代理 |
-| 系统内存耗尽 | 训练时需降 envs 关视频 |
-| 奖励变化时模型续接失败 | Actor 重置 Critic 方案被否定 |
-| IK 控制多次 NaN | 已放弃，关节位置控制稳定 |
+| 问题 | 状态 | 版本 |
+|---|---|---|
+| body_name="openarm_left_hand" 导致目标漂移 | ✅ 已修复 | v11 |
+| 夹爪刚度过高 (2000 N/m) 弹飞方块 | ✅ 已修复 | v11 |
+| 立方体尺寸过大 (8cm) 夹不住 | ✅ 已修复 | v10 |
+| FrameTransformer 无法用于双手（USD 缺少 link0）| ❌ 降级 | — |
+| ContactSensor 不可用（手指碰撞几何缺失）| ❌ 降级 | — |
+| 系统内存耗尽 | ⚠️ 训练时需降 envs | — |
+| 奖励变化时模型续接失败 | ⚠️ Actor 重置 | — |
 
 ---
 
 ## 12. 下一步
 
-1. 观察 v10 训练首次举升时间（预计 500-800 步）
-2. 降 envs 到 2048 缓解内存
-3. 首次举升成功后添加课程阶段 3（目标追踪全随机）
-4. 搭建 hand_side 控制的数据集记录 pipeline
-5. 长期：域态随机化 → sim-to-real 基础
-
-```
+1. `rm -rf logs/*` 清空旧日志，重新起跑 v11
+2. 观察 v11 训练首次举升时间
+3. 降 envs 到 2048 缓解内存
+4. 首次举升成功后考虑连续举升奖励（continuous_lifting_reward, weight=500）
+5. 搭建 hand_side 控制的数据集记录 pipeline
+6. 长期：域态随机化 → sim-to-real 基础

@@ -1,4 +1,4 @@
-# source/openarm/openarm/tasks/manager_based/openarm_manipulation/bimanual/lift/config/agents/rsl_rl_ppo_cfg.py
+# bimanual/lift/config/agents/rsl_rl_ppo_cfg.py
 
 ```python
 # Copyright 2025 Enactic, Inc.
@@ -29,6 +29,8 @@ from isaaclab_rl.rsl_rl import (
 class OpenArmLiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 40000
+    clip_obs = 10.0
+    clip_actions = 1.0
     save_interval = 500
     experiment_name = "openarm_bi_lift"
     empirical_normalization = False
@@ -46,11 +48,8 @@ class OpenArmLiftCubePPORunnerCfg(RslRlOnPolicyRunnerCfg):
         num_learning_epochs=5,
         num_mini_batches=4,
         learning_rate=3.0e-5,
-        schedule="adaptive",
         gamma=0.98,
         lam=0.95,
-        desired_kl=0.01,
         max_grad_norm=0.5,
     )
-
 ```

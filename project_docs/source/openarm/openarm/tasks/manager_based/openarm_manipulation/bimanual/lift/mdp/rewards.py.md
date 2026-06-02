@@ -1,4 +1,4 @@
-# source/openarm/openarm/tasks/manager_based/openarm_manipulation/bimanual/lift/mdp/rewards.py
+# bimanual/lift/mdp/rewards.py
 
 ```python
 # Copyright 2025 Enactic, Inc.
@@ -104,4 +104,58 @@ def object_goal_distance(
         1 - torch.tanh(distance / std)
     )
 
+
+def continuous_lifting_reward(
+    env: ManagerBasedRLEnv,
+    initial_height: float,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+) -> torch.Tensor:
+    """Continuous lifting reward: height above initial position.
+    
+    Reward = z - initial_height, clipped at 0.
+    This makes every millimeter of lift a tiny step toward the goal.
+    """
+    object: RigidObject = env.scene[object_cfg.name]
+    lift = object.data.root_pos_w[:, 2] - initial_height
+    return torch.clamp(lift, min=0.0)
+
+
+def left_grasp_reward(
+    env: ManagerBasedRLEnv,
+    distance_threshold: float = 0.06,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+) -> torch.Tensor:
+    """Reward closing left gripper when hand is near the cube (hand_side=0 only)."""
+    hand_side = _get_hand_side(env)
+    robot: Articulation = env.scene["robot"]
+    object: RigidObject = env.scene[object_cfg.name]
+
+    dist = torch.norm(object.data.root_pos_w[:, :3] - _hand_pos(robot, "left"), dim=1)
+    near_object = dist < distance_threshold
+
+    finger_idx = robot.find_joints("openarm_left_finger_joint.*")[0]
+    finger_pos = robot.data.joint_pos[:, finger_idx]
+    gripper_closed = finger_pos.mean(dim=1) < 0.02
+
+    return (near_object & gripper_closed).float() * (hand_side < 0.5).float()
+
+
+def right_grasp_reward(
+    env: ManagerBasedRLEnv,
+    distance_threshold: float = 0.06,
+    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+) -> torch.Tensor:
+    """Reward closing right gripper when hand is near the cube (hand_side=1 only)."""
+    hand_side = _get_hand_side(env)
+    robot: Articulation = env.scene["robot"]
+    object: RigidObject = env.scene[object_cfg.name]
+
+    dist = torch.norm(object.data.root_pos_w[:, :3] - _hand_pos(robot, "right"), dim=1)
+    near_object = dist < distance_threshold
+
+    finger_idx = robot.find_joints("openarm_right_finger_joint.*")[0]
+    finger_pos = robot.data.joint_pos[:, finger_idx]
+    gripper_closed = finger_pos.mean(dim=1) < 0.02
+
+    return (near_object & gripper_closed).float() * (hand_side > 0.5).float()
 ```

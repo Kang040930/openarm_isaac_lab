@@ -1,3 +1,99 @@
+## 2026-06-01
+### 17:10 — 三重 NaN 防线（对标 Isaac Lab 官方）
+
+**根因**: 夹爪过大力(333Nm)+ 高刚度(2000) 穿模 → 方块飞天 → 观测 $10^{10}$ → 动作爆发 → action_rate $-10^{24}$ → Loss inf → NaN
+
+**修复**:
+- `rsl_rl_ppo_cfg.py`: `empirical_normalization = True`（官方级前端截断 ±5σ）
+- `openarm_bimanual.py` 基础配置: effort_limit 333→**40**, stiffness 2e3→**500**, damping 1e2→**50**
+- `openarm_bimanual.py` HIGH_PD_CFG: stiffness 300→**500**, damping 15→**50**
+- `joint_pos_env_cfg.py`: env 层同步 500/50
+
+**三层防御**: empirical_normalization(±5σ) + clip_obs(10.0) + clip_actions(1.0)
+
+---
+
+**NaN 爆炸修复** (`rsl_rl_ppo_cfg.py` + `joint_pos_env_cfg.py`):
+- 新增 `clip_actions=1.0`：动作强制截断，即使物理学 NaN 也不会炸网络
+- 夹爪刚度 1000→**300**：防止穿模弹飞方块
+
+**奖励对齐 Isaac Lab 官方 Lift 方案** (`lift_env_cfg.py`):
+- `lifting_object`: continuous_lifting(50.0) → **object_is_lifted 二元(15.0)**，z>0.24→1.0
+- `goal_tracking` minimal_height: 0.37→**0.24**（和 lifting 同阈值）
+- `reaching` weight: 2.0→**1.0**
+
+**Grasp 引导奖励** (`rewards.py` + `lift_env_cfg.py`):
+- 新增 `left_grasp` / `right_grasp`：手距<6cm 且夹爪闭合 → 2.0 分/步
+- 引导策略：靠近方块后立刻闭合 → 形成 reach→grasp→lift 链条
+
+**场景调整** (`joint_pos_env_cfg.py`):
+- 平台 z: 0.28→**0.18**, 方块 z: 0.34→**0.24**（降低 10cm）
+- 方块 scale: 0.4→**0.6**（扩大 50%, 4.8cm）
+- 初始姿态：joint2=±1.2, joint4=1.5, joint6=±0.5, 手指张开 0.044
+
+---
+
+**修改** (`joint_pos_env_cfg.py`):
+- 基座 pos: `(0,0,0.30)` → `(0,0,-0.2)`（降低到桌下）
+- 关节角度调整为使夹爪悬停在平台上方：
+  - joint2 (肩俯仰): ±1.0 → ±0.5 rad（适度前倾）
+  - joint4 (肘): 0.0 → 1.2 rad（弯曲下伸）
+  - joint6 (腕俯仰): 0.0 → ±0.3 rad
+  - 手指: 0.0 → 0.044（初始张开）
+- 平台维持 z=0.28，方块 z=0.34
+
+---
+
+### 14:22 — 视频录制参数调整
+
+**修改** (`scripts/reinforcement_learning/rsl_rl/train.py`):
+- `--video_interval` 默认 2000 → **200**（每 200 iter 录制一次）
+- `--video_length` 默认 200 → **500**（完整 episode）
+- 训练命令只需加 `--video` 即可
+
+---
+
+### 14:05 — 两阶段课程学习方案
+
+**策略**: 先教微操（抓取），再教走位（绕障）
+
+**Stage 1 (Easy)** — `joint_pos_env_cfg.py` 当前配置:
+- 机器人基座 pos=(0,0,-0.2)，link0 在 z≈0.5（手臂根部略低于桌面 z=0.28~0.34）
+- left_joint2=-0.5 / right_joint2=0.5 (肩前倾), joint4=1.2 (肘下弯), joint6=±0.3 (腕)
+- 手指初始张开 0.044，夹爪悬停方块附近
+- 训练命令: `python scripts/reinforcement_learning/rsl_rl/train.py --task Isaac-Lift-Cube-OpenArm-Bi-v0 --headless --num_envs 4096`
+- 当 `lifting` 分数稳定 → Ctrl+C 停止
+
+**Stage 2 (Hard)** — 恢复默认初始姿态:
+- 取消注释代码中 Stage 2 的 `pos` 和 `joint_pos`, 注释掉 Stage 1
+- 使用 `--resume --load_run <stage1_log_dir>` 续训
+- 策略凭借 Stage 1 学到的抓取技能，主动学习绕障走位
+
+---
+
+### 11:59 — Body Name 最终修正: ".*base.*" → "openarm_body_link"
+
+**原因**: OpenArm 模型基座刚体实际名称为 `openarm_body_link`，正则 `".*base.*"` 匹配不上。
+**修复**: `body_name` → **`"openarm_body_link"`**，精确匹配模型中的基座 link。
+
+---
+
+### 11:58 — Body Name 修正: None → ".*base.*"
+
+**错误**: `body_name=None` 导致 Isaac Lab 底层 `pose_command.py` 对 `len(None)` 崩溃。
+**修复**: `body_name` 改为 `".*base.*"` — 正则匹配机器人基座刚体（base_link），基座是绝对静止参考系，目标点不再漂移。
+
+---
+
+### 11:55 — 致命 Bug 修复包 #2 & #3 & #4
+
+**Bug #4**（夹爪刚度过高）: `openarm_bimanual.py:101-102`
+- stiffness: `2e3` → **`500.0`**
+- damping: `1e2` → **`20.0`**
+- 防止夹爪像钢板一样触碰方块就弹飞（env 层已在 joint_pos_env_cfg.py:67-68 设置了相同值）
+
+---
+
 ## 2026-05-29
 ### 15:40 — 奖励完全对齐 OpenArm 单臂 demo
 

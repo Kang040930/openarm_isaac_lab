@@ -44,28 +44,50 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
         self.scene.robot = OPEN_ARM_HIGH_PD_CFG.replace(
             prim_path="{ENV_REGEX_NS}/Robot",
             init_state=ArticulationCfg.InitialStateCfg(
+                # === STAGE 1 (Easy): arms reach down to cube on table ===
+                pos=(0.0, 0.0, -0.2),
                 joint_pos={
                     "openarm_left_joint1": 0.0,
-                    "openarm_left_joint2": 0.0,
+                    "openarm_left_joint2": -1.2,
                     "openarm_left_joint3": 0.0,
-                    "openarm_left_joint4": 0.0,
+                    "openarm_left_joint4": 1.5,
                     "openarm_left_joint5": 0.0,
-                    "openarm_left_joint6": 0.0,
+                    "openarm_left_joint6": -0.5,
                     "openarm_left_joint7": 0.0,
                     "openarm_right_joint1": 0.0,
-                    "openarm_right_joint2": 0.0,
+                    "openarm_right_joint2": 1.2,
                     "openarm_right_joint3": 0.0,
-                    "openarm_right_joint4": 0.0,
+                    "openarm_right_joint4": 1.5,
                     "openarm_right_joint5": 0.0,
-                    "openarm_right_joint6": 0.0,
+                    "openarm_right_joint6": 0.5,
                     "openarm_right_joint7": 0.0,
-                    "openarm_left_finger_joint.*": 0.0,
-                    "openarm_right_finger_joint.*": 0.0,
+                    "openarm_left_finger_joint.*": 0.044,
+                    "openarm_right_finger_joint.*": 0.044,
                 },
+                # === STAGE 2 (Hard): revert to original ===
+                # pos=(0.0, 0.0, 0.0),
+                # joint_pos={
+                #     "openarm_left_joint1": 0.0,
+                #     "openarm_left_joint2": 0.0,
+                #     "openarm_left_joint3": 0.0,
+                #     "openarm_left_joint4": 0.0,
+                #     "openarm_left_joint5": 0.0,
+                #     "openarm_left_joint6": 0.0,
+                #     "openarm_left_joint7": 0.0,
+                #     "openarm_right_joint1": 0.0,
+                #     "openarm_right_joint2": 0.0,
+                #     "openarm_right_joint3": 0.0,
+                #     "openarm_right_joint4": 0.0,
+                #     "openarm_right_joint5": 0.0,
+                #     "openarm_right_joint6": 0.0,
+                #     "openarm_right_joint7": 0.0,
+                #     "openarm_left_finger_joint.*": 0.0,
+                #     "openarm_right_finger_joint.*": 0.0,
+                # },
             ),
         )
         self.scene.robot.actuators["openarm_gripper"].stiffness = 500.0
-        self.scene.robot.actuators["openarm_gripper"].damping = 20.0
+        self.scene.robot.actuators["openarm_gripper"].damping = 50.0
 
         self.actions.left_arm_action = MaskedJointPositionActionCfg(
             asset_name="robot",
@@ -113,13 +135,13 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
             close_command_expr={"openarm_right_finger_joint.*": 0.0},
         )
 
-        self.commands.object_pose.body_name = "openarm_left_hand"
+        self.commands.object_pose.body_name = "openarm_body_link"
         self.commands.object_pose.ranges.pitch = (math.pi / 2, math.pi / 2)
 
         self.scene.platform = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Platform",
             init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[0.25, 0, 0.28], rot=[1, 0, 0, 0]
+                pos=[0.25, 0, 0.18], rot=[1, 0, 0, 0]
             ),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
@@ -133,11 +155,11 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[0.25, 0, 0.34], rot=[1, 0, 0, 0]
+                pos=[0.25, 0, 0.24], rot=[1, 0, 0, 0]
             ),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
-                scale=(0.4, 0.4, 0.4),
+                scale=(0.6, 0.6, 0.6),
                 rigid_props=RigidBodyPropertiesCfg(
                     solver_position_iteration_count=16,
                     solver_velocity_iteration_count=1,

@@ -1,4 +1,4 @@
-# source/openarm/openarm/tasks/manager_based/openarm_manipulation/bimanual/lift/lift_env_cfg.py
+# bimanual/lift/lift_env_cfg.py
 
 ```python
 # Copyright 2025 Enactic, Inc.
@@ -244,22 +244,25 @@ class EventCfg:
 
 @configclass
 class RewardsCfg:
-    """Reward terms for the MDP (aligned with OpenArm unimanual lift demo)."""
+    """Reward terms for the MDP (aligned with Isaac Lab official lift task)."""
 
-    left_reaching = RewTerm(func=mdp.left_reaching_reward, params={"std": 0.1}, weight=1.1)
-    right_reaching = RewTerm(func=mdp.right_reaching_reward, params={"std": 0.1}, weight=1.1)
+    left_reaching = RewTerm(func=mdp.left_reaching_reward, params={"std": 0.1}, weight=5.0)
+    right_reaching = RewTerm(func=mdp.right_reaching_reward, params={"std": 0.1}, weight=5.0)
 
-    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.37}, weight=8.0)
+    left_grasp = RewTerm(func=mdp.left_grasp_reward, params={"distance_threshold": 0.06}, weight=2.0)
+    right_grasp = RewTerm(func=mdp.right_grasp_reward, params={"distance_threshold": 0.06}, weight=2.0)
+
+    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.24}, weight=15.0)
 
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.3, "minimal_height": 0.37, "command_name": "object_pose"},
+        params={"std": 0.3, "minimal_height": 0.24, "command_name": "object_pose"},
         weight=16.0,
     )
 
     object_goal_tracking_fine_grained = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.05, "minimal_height": 0.37, "command_name": "object_pose"},
+        params={"std": 0.05, "minimal_height": 0.24, "command_name": "object_pose"},
         weight=5.0,
     )
 
@@ -315,6 +318,11 @@ class TerminationsCfg:
         params={"minimum_height": -0.05, "asset_cfg": SceneEntityCfg("object")},
     )
 
+    joint_vel_out_of_limit = DoneTerm(
+        func=mdp.joint_vel_out_of_manual_limit,
+        params={"asset_cfg": SceneEntityCfg("robot"), "max_velocity": 50.0},
+    )
+
 
 @configclass
 class CurriculumCfg:
@@ -353,5 +361,4 @@ class LiftEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.physx.gpu_found_lost_aggregate_pairs_capacity = 1024 * 1024 * 8
         self.sim.physx.gpu_total_aggregate_pairs_capacity = 32 * 1024
         self.sim.physx.friction_correlation_distance = 0.00625
-
 ```

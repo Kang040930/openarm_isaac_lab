@@ -84,9 +84,9 @@ OPEN_ARM_CFG = ArticulationCfg(
                 "openarm_right_finger_joint.*",
             ],
             velocity_limit_sim=0.2,
-            effort_limit_sim=333.33,
-            stiffness=2e3,
-            damping=1e2,
+            effort_limit_sim=40.0,
+            stiffness=500.0,
+            damping=50.0,
         ),
     },
     soft_joint_pos_limit_factor=1.0,
@@ -98,8 +98,8 @@ OPEN_ARM_HIGH_PD_CFG = OPEN_ARM_CFG.copy()
 OPEN_ARM_HIGH_PD_CFG.spawn.rigid_props.disable_gravity = True
 OPEN_ARM_HIGH_PD_CFG.actuators["openarm_arm"].stiffness = 400.0
 OPEN_ARM_HIGH_PD_CFG.actuators["openarm_arm"].damping = 80.0
-OPEN_ARM_HIGH_PD_CFG.actuators["openarm_gripper"].stiffness = 2e3
-OPEN_ARM_HIGH_PD_CFG.actuators["openarm_gripper"].damping = 1e2
+OPEN_ARM_HIGH_PD_CFG.actuators["openarm_gripper"].stiffness = 500.0
+OPEN_ARM_HIGH_PD_CFG.actuators["openarm_gripper"].damping = 50.0
 """Configuration of OpenArm robot with stiffer PD control.
 
 This configuration is useful for task-space control using differential IK.

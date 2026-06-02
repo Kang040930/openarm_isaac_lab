@@ -205,7 +205,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         runner.load(resume_path)
     else:
         # FORCED RESUME: load old model
-        forced_ckpt = "/home/kk/openarm_isaac_lab-1/trainings/20260529_154309_actor_resume/models/model_500.pt"
+        forced_ckpt = "/home/kk/openarm_isaac_lab-1/trainings/model_20260601_1525_stage1.pt"
         if os.path.exists(forced_ckpt):
             print(f"[INFO]: Loading full checkpoint from: {forced_ckpt}")
             runner.load(forced_ckpt)
