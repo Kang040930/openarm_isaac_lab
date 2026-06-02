@@ -14,6 +14,8 @@
 
 
 from isaaclab.assets import RigidObjectCfg
+from isaaclab.sensors import FrameTransformerCfg
+from isaaclab.sensors.frame_transformer.frame_transformer_cfg import OffsetCfg
 from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import UsdFileCfg
 from isaaclab.utils import configclass
@@ -31,6 +33,7 @@ import math
 ##
 # Pre-defined configs
 ##
+from isaaclab.markers.config import FRAME_MARKER_CFG  # isort: skip
 from openarm.tasks.manager_based.openarm_manipulation.assets.openarm_bimanual import (
     OPEN_ARM_HIGH_PD_CFG,
 )
@@ -44,22 +47,22 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
         self.scene.robot = OPEN_ARM_HIGH_PD_CFG.replace(
             prim_path="{ENV_REGEX_NS}/Robot",
             init_state=ArticulationCfg.InitialStateCfg(
-                # === STAGE 1 (Easy): arms reach down to cube on table ===
-                pos=(0.0, 0.0, -0.2),
+                # === Natural hanging pose: arms above platform, comfortable ===
+                pos=(0.0, 0.0, 0.0),
                 joint_pos={
                     "openarm_left_joint1": 0.0,
-                    "openarm_left_joint2": -1.2,
+                    "openarm_left_joint2": -1.0,
                     "openarm_left_joint3": 0.0,
-                    "openarm_left_joint4": 1.5,
+                    "openarm_left_joint4": 1.0,
                     "openarm_left_joint5": 0.0,
-                    "openarm_left_joint6": -0.5,
+                    "openarm_left_joint6": -0.3,
                     "openarm_left_joint7": 0.0,
                     "openarm_right_joint1": 0.0,
-                    "openarm_right_joint2": 1.2,
+                    "openarm_right_joint2": 1.0,
                     "openarm_right_joint3": 0.0,
-                    "openarm_right_joint4": 1.5,
+                    "openarm_right_joint4": 1.0,
                     "openarm_right_joint5": 0.0,
-                    "openarm_right_joint6": 0.5,
+                    "openarm_right_joint6": 0.3,
                     "openarm_right_joint7": 0.0,
                     "openarm_left_finger_joint.*": 0.044,
                     "openarm_right_finger_joint.*": 0.044,
@@ -101,7 +104,7 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
                 "openarm_left_joint6",
                 "openarm_left_joint7",
             ],
-            scale=0.2,
+            scale=0.5,
             use_default_offset=True,
         )
 
@@ -117,7 +120,7 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
                 "openarm_right_joint6",
                 "openarm_right_joint7",
             ],
-            scale=0.2,
+            scale=0.5,
             use_default_offset=True,
         )
 
@@ -141,11 +144,11 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
         self.scene.platform = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Platform",
             init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[0.25, 0, 0.18], rot=[1, 0, 0, 0]
+                pos=[0.40, 0, 0.28], rot=[1, 0, 0, 0]
             ),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
-                scale=(5.0, 4.0, 0.4),
+                scale=(6.0, 6.0, 0.4),
                 rigid_props=RigidBodyPropertiesCfg(
                     kinematic_enabled=True,
                 ),
@@ -155,7 +158,7 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[0.25, 0, 0.24], rot=[1, 0, 0, 0]
+                pos=[0.40, 0, 0.34], rot=[1, 0, 0, 0]
             ),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
@@ -171,6 +174,31 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
             ),
         )
 
+        marker_cfg = FRAME_MARKER_CFG.copy()
+        marker_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+        marker_cfg.prim_path = "/Visuals/FrameTransformer"
+        self.scene.ee_frame_left = FrameTransformerCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/openarm_body_link",
+            debug_vis=False,
+            visualizer_cfg=marker_cfg,
+            target_frames=[
+                FrameTransformerCfg.FrameCfg(
+                    prim_path="{ENV_REGEX_NS}/Robot/openarm_left_ee_tcp",
+                    name="end_effector",
+                ),
+            ],
+        )
+        self.scene.ee_frame_right = FrameTransformerCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/openarm_body_link",
+            debug_vis=False,
+            visualizer_cfg=marker_cfg,
+            target_frames=[
+                FrameTransformerCfg.FrameCfg(
+                    prim_path="{ENV_REGEX_NS}/Robot/openarm_right_ee_tcp",
+                    name="end_effector",
+                ),
+            ],
+        )
 
 
 

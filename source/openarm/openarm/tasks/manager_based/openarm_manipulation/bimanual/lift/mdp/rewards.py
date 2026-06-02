@@ -19,18 +19,11 @@ from typing import TYPE_CHECKING
 
 from isaaclab.assets import Articulation, RigidObject
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.sensors import FrameTransformer
 from isaaclab.utils.math import combine_frame_transforms
 
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
-
-
-def _hand_body_idx(robot: Articulation, side: str) -> int:
-    return robot.find_bodies(f"openarm_{side}_hand")[0][0]
-
-
-def _hand_pos(robot: Articulation, side: str) -> torch.Tensor:
-    return robot.data.body_pos_w[:, _hand_body_idx(robot, side), :]
 
 
 def _get_hand_side(env: ManagerBasedRLEnv) -> torch.Tensor:
@@ -48,12 +41,14 @@ def left_reaching_reward(
     env: ManagerBasedRLEnv,
     std: float,
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame_left"),
 ) -> torch.Tensor:
     """Reaching reward for left hand (only active when hand_side=0)."""
     hand_side = _get_hand_side(env)
     object: RigidObject = env.scene[object_cfg.name]
-    robot: Articulation = env.scene["robot"]
-    dist = torch.norm(object.data.root_pos_w[:, :3] - _hand_pos(robot, "left"), dim=1)
+    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
+    ee_w = ee_frame.data.target_pos_w[..., 0, :]
+    dist = torch.norm(object.data.root_pos_w[:, :3] - ee_w, dim=1)
     return (1 - torch.tanh(dist / std)) * (hand_side < 0.5).float()
 
 
@@ -61,12 +56,14 @@ def right_reaching_reward(
     env: ManagerBasedRLEnv,
     std: float,
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame_right"),
 ) -> torch.Tensor:
     """Reaching reward for right hand (only active when hand_side=1)."""
     hand_side = _get_hand_side(env)
     object: RigidObject = env.scene[object_cfg.name]
-    robot: Articulation = env.scene["robot"]
-    dist = torch.norm(object.data.root_pos_w[:, :3] - _hand_pos(robot, "right"), dim=1)
+    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
+    ee_w = ee_frame.data.target_pos_w[..., 0, :]
+    dist = torch.norm(object.data.root_pos_w[:, :3] - ee_w, dim=1)
     return (1 - torch.tanh(dist / std)) * (hand_side > 0.5).float()
 
 
@@ -121,13 +118,16 @@ def left_grasp_reward(
     env: ManagerBasedRLEnv,
     distance_threshold: float = 0.06,
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame_left"),
 ) -> torch.Tensor:
     """Reward closing left gripper when hand is near the cube (hand_side=0 only)."""
     hand_side = _get_hand_side(env)
     robot: Articulation = env.scene["robot"]
     object: RigidObject = env.scene[object_cfg.name]
+    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
+    ee_w = ee_frame.data.target_pos_w[..., 0, :]
 
-    dist = torch.norm(object.data.root_pos_w[:, :3] - _hand_pos(robot, "left"), dim=1)
+    dist = torch.norm(object.data.root_pos_w[:, :3] - ee_w, dim=1)
     near_object = dist < distance_threshold
 
     finger_idx = robot.find_joints("openarm_left_finger_joint.*")[0]
@@ -141,13 +141,16 @@ def right_grasp_reward(
     env: ManagerBasedRLEnv,
     distance_threshold: float = 0.06,
     object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
+    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame_right"),
 ) -> torch.Tensor:
     """Reward closing right gripper when hand is near the cube (hand_side=1 only)."""
     hand_side = _get_hand_side(env)
     robot: Articulation = env.scene["robot"]
     object: RigidObject = env.scene[object_cfg.name]
+    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
+    ee_w = ee_frame.data.target_pos_w[..., 0, :]
 
-    dist = torch.norm(object.data.root_pos_w[:, :3] - _hand_pos(robot, "right"), dim=1)
+    dist = torch.norm(object.data.root_pos_w[:, :3] - ee_w, dim=1)
     near_object = dist < distance_threshold
 
     finger_idx = robot.find_joints("openarm_right_finger_joint.*")[0]

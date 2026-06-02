@@ -32,6 +32,7 @@ from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.sensors.frame_transformer.frame_transformer_cfg import FrameTransformerCfg
 from isaaclab.sim.spawners.from_files.from_files_cfg import GroundPlaneCfg, UsdFileCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
@@ -51,6 +52,8 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     """Configuration for the bimanual lift scene with a robot and an object."""
 
     robot: ArticulationCfg = MISSING
+    ee_frame_left: FrameTransformerCfg = MISSING
+    ee_frame_right: FrameTransformerCfg = MISSING
     object: RigidObjectCfg | DeformableObjectCfg = MISSING
     platform: RigidObjectCfg = MISSING
 
@@ -81,7 +84,7 @@ class CommandsCfg:
         resampling_time_range=(8.0, 8.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(0.15, 0.3),
+            pos_x=(0.30, 0.50),
             pos_y=(-0.1, 0.1),
             pos_z=(0.5, 0.7),
             roll=(0.0, 0.0),
@@ -243,23 +246,20 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP (aligned with Isaac Lab official lift task)."""
 
-    left_reaching = RewTerm(func=mdp.left_reaching_reward, params={"std": 0.1}, weight=5.0)
-    right_reaching = RewTerm(func=mdp.right_reaching_reward, params={"std": 0.1}, weight=5.0)
+    left_reaching = RewTerm(func=mdp.left_reaching_reward, params={"std": 0.3}, weight=1.1)
+    right_reaching = RewTerm(func=mdp.right_reaching_reward, params={"std": 0.3}, weight=1.1)
 
-    left_grasp = RewTerm(func=mdp.left_grasp_reward, params={"distance_threshold": 0.06}, weight=2.0)
-    right_grasp = RewTerm(func=mdp.right_grasp_reward, params={"distance_threshold": 0.06}, weight=2.0)
-
-    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.24}, weight=15.0)
+    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.35}, weight=15.0)
 
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.3, "minimal_height": 0.24, "command_name": "object_pose"},
+        params={"std": 0.3, "minimal_height": 0.35, "command_name": "object_pose"},
         weight=16.0,
     )
 
     object_goal_tracking_fine_grained = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.05, "minimal_height": 0.24, "command_name": "object_pose"},
+        params={"std": 0.05, "minimal_height": 0.35, "command_name": "object_pose"},
         weight=5.0,
     )
 
@@ -323,10 +323,18 @@ class TerminationsCfg:
 
 @configclass
 class CurriculumCfg:
-    """No curriculum — hand_side always random, cube always fixed.
-    Action masking handles hand selection.
-    """
-    pass
+    action_rate = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={"term_name": "action_rate", "weight": -1e-1, "num_steps": 10000},
+    )
+    left_joint_vel = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={"term_name": "left_joint_vel", "weight": -1e-1, "num_steps": 10000},
+    )
+    right_joint_vel = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={"term_name": "right_joint_vel", "weight": -1e-1, "num_steps": 10000},
+    )
 
 
 ##
