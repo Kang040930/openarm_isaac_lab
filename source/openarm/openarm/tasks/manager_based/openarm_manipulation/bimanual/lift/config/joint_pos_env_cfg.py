@@ -52,14 +52,14 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
                 # Both arms symmetrical. Fingers open.
                 pos=(0.0, 0.0, 0.0),
                 joint_pos={
-                    "openarm_left_joint1": 1.4,
+                    "openarm_left_joint1": 1.39,
                     "openarm_left_joint2": 0.0,
                     "openarm_left_joint3": -1.57,
                     "openarm_left_joint4": 1.57,
                     "openarm_left_joint5": 0.0,
                     "openarm_left_joint6": 0.0,
                     "openarm_left_joint7": 0.0,
-                    "openarm_right_joint1": 1.4,
+                    "openarm_right_joint1": 1.39,
                     "openarm_right_joint2": 0.0,
                     "openarm_right_joint3": -1.57,
                     "openarm_right_joint4": 1.57,
