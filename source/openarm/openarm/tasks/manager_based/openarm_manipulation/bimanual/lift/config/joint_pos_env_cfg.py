@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from isaaclab.assets import RigidObjectCfg
+from isaaclab.assets import AssetBaseCfg, RigidObjectCfg
 from isaaclab.sensors import FrameTransformerCfg
 from isaaclab.sensors.frame_transformer.frame_transformer_cfg import OffsetCfg
 from isaaclab.sim.schemas.schemas_cfg import RigidBodyPropertiesCfg
@@ -47,46 +47,28 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
         self.scene.robot = OPEN_ARM_HIGH_PD_CFG.replace(
             prim_path="{ENV_REGEX_NS}/Robot",
             init_state=ArticulationCfg.InitialStateCfg(
-                # === Natural hanging pose: arms above platform, comfortable ===
+                # === Demo-inspired symmetric initial pose ===
+                # joint1 rotated to face +X, joint3=-pi/2, joint4=pi/2
+                # Both arms symmetrical. Fingers open.
                 pos=(0.0, 0.0, 0.0),
                 joint_pos={
-                    "openarm_left_joint1": 0.0,
-                    "openarm_left_joint2": -1.0,
-                    "openarm_left_joint3": 0.0,
-                    "openarm_left_joint4": 1.0,
+                    "openarm_left_joint1": 1.4,
+                    "openarm_left_joint2": 0.0,
+                    "openarm_left_joint3": -1.57,
+                    "openarm_left_joint4": 1.57,
                     "openarm_left_joint5": 0.0,
-                    "openarm_left_joint6": -0.3,
+                    "openarm_left_joint6": 0.0,
                     "openarm_left_joint7": 0.0,
-                    "openarm_right_joint1": 0.0,
-                    "openarm_right_joint2": 1.0,
-                    "openarm_right_joint3": 0.0,
-                    "openarm_right_joint4": 1.0,
+                    "openarm_right_joint1": 1.4,
+                    "openarm_right_joint2": 0.0,
+                    "openarm_right_joint3": -1.57,
+                    "openarm_right_joint4": 1.57,
                     "openarm_right_joint5": 0.0,
-                    "openarm_right_joint6": 0.3,
+                    "openarm_right_joint6": 0.0,
                     "openarm_right_joint7": 0.0,
                     "openarm_left_finger_joint.*": 0.044,
                     "openarm_right_finger_joint.*": 0.044,
                 },
-                # === STAGE 2 (Hard): revert to original ===
-                # pos=(0.0, 0.0, 0.0),
-                # joint_pos={
-                #     "openarm_left_joint1": 0.0,
-                #     "openarm_left_joint2": 0.0,
-                #     "openarm_left_joint3": 0.0,
-                #     "openarm_left_joint4": 0.0,
-                #     "openarm_left_joint5": 0.0,
-                #     "openarm_left_joint6": 0.0,
-                #     "openarm_left_joint7": 0.0,
-                #     "openarm_right_joint1": 0.0,
-                #     "openarm_right_joint2": 0.0,
-                #     "openarm_right_joint3": 0.0,
-                #     "openarm_right_joint4": 0.0,
-                #     "openarm_right_joint5": 0.0,
-                #     "openarm_right_joint6": 0.0,
-                #     "openarm_right_joint7": 0.0,
-                #     "openarm_left_finger_joint.*": 0.0,
-                #     "openarm_right_finger_joint.*": 0.0,
-                # },
             ),
         )
         self.scene.robot.actuators["openarm_gripper"].stiffness = 500.0
@@ -141,28 +123,24 @@ class OpenArmCubeLiftEnvCfg(LiftEnvCfg):
         self.commands.object_pose.body_name = "openarm_body_link"
         self.commands.object_pose.ranges.pitch = (math.pi / 2, math.pi / 2)
 
-        self.scene.platform = RigidObjectCfg(
-            prim_path="{ENV_REGEX_NS}/Platform",
-            init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[0.40, 0, 0.28], rot=[1, 0, 0, 0]
+        self.scene.platform = AssetBaseCfg(
+            prim_path="{ENV_REGEX_NS}/Table",
+            init_state=AssetBaseCfg.InitialStateCfg(
+                pos=[0.5, 0, 0], rot=[0.707, 0, 0, 0.707]
             ),
             spawn=UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
-                scale=(6.0, 6.0, 0.4),
-                rigid_props=RigidBodyPropertiesCfg(
-                    kinematic_enabled=True,
-                ),
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd"
             ),
         )
 
         self.scene.object = RigidObjectCfg(
             prim_path="{ENV_REGEX_NS}/Object",
             init_state=RigidObjectCfg.InitialStateCfg(
-                pos=[0.40, 0, 0.34], rot=[1, 0, 0, 0]
+                pos=[0.4, 0, 0.055], rot=[1, 0, 0, 0]
             ),
             spawn=UsdFileCfg(
                 usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Blocks/DexCube/dex_cube_instanceable.usd",
-                scale=(0.6, 0.6, 0.6),
+                scale=(0.8, 0.8, 0.8),
                 rigid_props=RigidBodyPropertiesCfg(
                     solver_position_iteration_count=16,
                     solver_velocity_iteration_count=1,

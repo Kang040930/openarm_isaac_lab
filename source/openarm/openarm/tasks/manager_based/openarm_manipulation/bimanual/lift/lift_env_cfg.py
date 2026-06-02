@@ -55,7 +55,7 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     ee_frame_left: FrameTransformerCfg = MISSING
     ee_frame_right: FrameTransformerCfg = MISSING
     object: RigidObjectCfg | DeformableObjectCfg = MISSING
-    platform: RigidObjectCfg = MISSING
+    platform: AssetBaseCfg = MISSING
 
     ground = AssetBaseCfg(
         prim_path="/World/ground",
@@ -84,9 +84,9 @@ class CommandsCfg:
         resampling_time_range=(8.0, 8.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(0.30, 0.50),
-            pos_y=(-0.1, 0.1),
-            pos_z=(0.5, 0.7),
+            pos_x=(0.2, 0.4),
+            pos_y=(-0.2, 0.2),
+            pos_z=(0.15, 0.4),
             roll=(0.0, 0.0),
             pitch=(0.0, 0.0),
             yaw=(0.0, 0.0),
@@ -214,9 +214,6 @@ class ObservationsCfg:
         hand_side_label = ObsTerm(func=mdp.hand_side_label)
         left_hand_obj_rel = ObsTerm(func=mdp.left_hand_object_rel_pos)
         right_hand_obj_rel = ObsTerm(func=mdp.right_hand_object_rel_pos)
-        vision_features = ObsTerm(func=mdp.vision_features)
-        vision_validity = ObsTerm(func=mdp.vision_validity_mask)
-        object_type_label = ObsTerm(func=mdp.object_type_label)
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -246,20 +243,20 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP (aligned with Isaac Lab official lift task)."""
 
-    left_reaching = RewTerm(func=mdp.left_reaching_reward, params={"std": 0.3}, weight=1.1)
-    right_reaching = RewTerm(func=mdp.right_reaching_reward, params={"std": 0.3}, weight=1.1)
+    left_reaching = RewTerm(func=mdp.left_reaching_reward, params={"std": 0.1}, weight=1.1)
+    right_reaching = RewTerm(func=mdp.right_reaching_reward, params={"std": 0.1}, weight=1.1)
 
-    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.35}, weight=15.0)
+    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.04}, weight=15.0)
 
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.3, "minimal_height": 0.35, "command_name": "object_pose"},
+        params={"std": 0.3, "minimal_height": 0.04, "command_name": "object_pose"},
         weight=16.0,
     )
 
     object_goal_tracking_fine_grained = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.05, "minimal_height": 0.35, "command_name": "object_pose"},
+        params={"std": 0.05, "minimal_height": 0.04, "command_name": "object_pose"},
         weight=5.0,
     )
 
