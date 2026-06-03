@@ -55,12 +55,12 @@ class ObjectTableSceneCfg(InteractiveSceneCfg):
     ee_frame_left: FrameTransformerCfg = MISSING
     ee_frame_right: FrameTransformerCfg = MISSING
     object: RigidObjectCfg | DeformableObjectCfg = MISSING
-    platform: AssetBaseCfg = MISSING
+    platform: RigidObjectCfg = MISSING
 
     ground = AssetBaseCfg(
         prim_path="/World/ground",
-        spawn=sim_utils.GroundPlaneCfg(),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -1.05)),
+        spawn=sim_utils.GroundPlaneCfg(color=(0.05, 0.05, 0.05)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, 0.0)),
     )
 
     light = AssetBaseCfg(
@@ -81,12 +81,12 @@ class CommandsCfg:
     object_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
         body_name=MISSING,
-        resampling_time_range=(8.0, 8.0),
+        resampling_time_range=(0.0, 0.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(0.2, 0.4),
-            pos_y=(-0.2, 0.2),
-            pos_z=(0.15, 0.4),
+            pos_x=(0.45, 0.45),
+            pos_y=(0.0, 0.0),
+            pos_z=(0.55, 0.55),
             roll=(0.0, 0.0),
             pitch=(0.0, 0.0),
             yaw=(0.0, 0.0),
@@ -246,17 +246,17 @@ class RewardsCfg:
     left_reaching = RewTerm(func=mdp.left_reaching_reward, params={"std": 0.1}, weight=1.1)
     right_reaching = RewTerm(func=mdp.right_reaching_reward, params={"std": 0.1}, weight=1.1)
 
-    lifting_object = RewTerm(func=mdp.object_is_lifted, params={"minimal_height": 0.04}, weight=15.0)
+    lifting_object = RewTerm(func=mdp.object_is_lifted,         params={"minimal_height": 0.38}, weight=15.0)
 
     object_goal_tracking = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.3, "minimal_height": 0.04, "command_name": "object_pose"},
+        params={"std": 0.3, "minimal_height": 0.38, "command_name": "object_pose"},
         weight=16.0,
     )
 
     object_goal_tracking_fine_grained = RewTerm(
         func=mdp.object_goal_distance,
-        params={"std": 0.05, "minimal_height": 0.04, "command_name": "object_pose"},
+        params={"std": 0.05, "minimal_height": 0.38, "command_name": "object_pose"},
         weight=5.0,
     )
 
