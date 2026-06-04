@@ -17,7 +17,7 @@ from __future__ import annotations
 import torch
 from typing import TYPE_CHECKING
 
-from isaaclab.assets import Articulation, RigidObject
+from isaaclab.assets import RigidObject
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.sensors import FrameTransformer
 from isaaclab.utils.math import combine_frame_transforms
@@ -98,63 +98,3 @@ def object_goal_distance(
         1 - torch.tanh(distance / std)
     )
 
-
-def continuous_lifting_reward(
-    env: ManagerBasedRLEnv,
-    initial_height: float,
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-) -> torch.Tensor:
-    """Continuous lifting reward: height above initial position.
-    
-    Reward = z - initial_height, clipped at 0.
-    This makes every millimeter of lift a tiny step toward the goal.
-    """
-    object: RigidObject = env.scene[object_cfg.name]
-    lift = object.data.root_pos_w[:, 2] - initial_height
-    return torch.clamp(lift, min=0.0)
-
-
-def left_grasp_reward(
-    env: ManagerBasedRLEnv,
-    distance_threshold: float = 0.06,
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame_left"),
-) -> torch.Tensor:
-    """Reward closing left gripper when hand is near the cube (hand_side=0 only)."""
-    hand_side = _get_hand_side(env)
-    robot: Articulation = env.scene["robot"]
-    object: RigidObject = env.scene[object_cfg.name]
-    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
-    ee_w = ee_frame.data.target_pos_w[..., 0, :]
-
-    dist = torch.norm(object.data.root_pos_w[:, :3] - ee_w, dim=1)
-    near_object = dist < distance_threshold
-
-    finger_idx = robot.find_joints("openarm_left_finger_joint.*")[0]
-    finger_pos = robot.data.joint_pos[:, finger_idx]
-    gripper_closed = finger_pos.mean(dim=1) < 0.02
-
-    return (near_object & gripper_closed).float() * (hand_side < 0.5).float()
-
-
-def right_grasp_reward(
-    env: ManagerBasedRLEnv,
-    distance_threshold: float = 0.06,
-    object_cfg: SceneEntityCfg = SceneEntityCfg("object"),
-    ee_frame_cfg: SceneEntityCfg = SceneEntityCfg("ee_frame_right"),
-) -> torch.Tensor:
-    """Reward closing right gripper when hand is near the cube (hand_side=1 only)."""
-    hand_side = _get_hand_side(env)
-    robot: Articulation = env.scene["robot"]
-    object: RigidObject = env.scene[object_cfg.name]
-    ee_frame: FrameTransformer = env.scene[ee_frame_cfg.name]
-    ee_w = ee_frame.data.target_pos_w[..., 0, :]
-
-    dist = torch.norm(object.data.root_pos_w[:, :3] - ee_w, dim=1)
-    near_object = dist < distance_threshold
-
-    finger_idx = robot.find_joints("openarm_right_finger_joint.*")[0]
-    finger_pos = robot.data.joint_pos[:, finger_idx]
-    gripper_closed = finger_pos.mean(dim=1) < 0.02
-
-    return (near_object & gripper_closed).float() * (hand_side > 0.5).float()
